@@ -1,5 +1,7 @@
 <?php
 
+require_once 'Qiniu/QiniuStorage.class.php';
+
 class Qiniu{
     /**
      * 上传文件根目录
@@ -29,7 +31,6 @@ class Qiniu{
 	public function __construct($root, $config){
         $this->config = array_merge($this->config, $config);
         /* 设置根目录 */
-        require_once 'Qiniu/QiniuStorage.class.php';
         $this->qiniu = new QiniuStorage($config);
         $this->rootPath = trim($root, './') . '/';
 	}

@@ -37,10 +37,11 @@ class Upload
 
     /**
      * 构造方法，用于构造上传实例
-     * @param array  $config 配置
+     * @param array  $config 上传配置
      * @param string $driver 要使用的上传驱动 LOCAL-本地上传驱动，FTP-FTP上传驱动
+     * @param array $driverConfig 上传驱动配置
      */
-    public function __construct($config = array(), $driver = '', $driverConfig = null){
+    public function __construct($config = array(), $driver = '', $driverConfig = array()){
         /* 获取配置 */
         $this->config   =   array_merge($this->config, $config);
         $driver         =   $driver? $driver : ($this->driver? $this->driver : 'Local');

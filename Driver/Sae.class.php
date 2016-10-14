@@ -35,7 +35,7 @@ class Sae{
      * @return boolean true-检测通过，false-检测失败
      */
     public function checkRootPath(){
-        $st=new \SaeStorage();
+        $st=new SaeStorage();
         if(false===$st->getDomainCapacity($this->domain)){
           $this->error='您好像没有建立Storage的domain['.$this->domain.']';
           return false;
@@ -61,7 +61,7 @@ class Sae{
      */
     public function save($file, $replace=true) {
         $filename = ltrim($this->rootPath .'/'. $file['savepath'] . $file['savename'],'/');
-        $st=new \SaeStorage();
+        $st=new SaeStorage();
         /* 不覆盖同名文件 */ 
         if (!$replace && $st->fileExists($this->domain,$filename)) {
             $this->error = '存在同名文件' . $file['savename'];

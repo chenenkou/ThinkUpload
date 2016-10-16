@@ -330,11 +330,12 @@ class Upload
         foreach ($files as $key=>$file){
             $temp = array();
             $name = $this->dealPutFileName($file);
+            $fileInfo = $this->putFileInfo($file);
             $temp['name'] = $name;
-            $temp['type'] = '';
+            $temp['type'] = ($fileInfo === false) ? '' : $fileInfo['Content-Type'];
             $temp['tmp_name'] = $file;
-            $temp['error'] = 0;
-            $temp['size'] = -1;
+            $temp['error'] = ($fileInfo === false) ? 8 : 0;
+            $temp['size'] = ($fileInfo === false) ? 0 : $fileInfo['Content-Length'];
 
             $fileArray[$key] = $temp;
         }
@@ -379,6 +380,7 @@ class Upload
         /* 无效上传 */
         if (empty($file['name'])){
             $this->error = '未知上传错误！';
+            return false;
         }
 
         /* 检查是否合法上传 */
@@ -421,29 +423,23 @@ class Upload
             return false;
         }
 
-        /* 无效上传 */
+        /* 无效文件 */
         if (empty($file['name'])){
             $this->error = '未知上传错误！';
-        }
-
-        /* 检查是否合法上传 */
-        if (!is_uploaded_file($file['tmp_name'])) {
-            $this->error = '非法上传文件！';
             return false;
         }
 
         /* 检查文件大小 */
-        /*if (!$this->checkSize($file['size'])) {
+        if (!$this->checkSize($file['size'])) {
             $this->error = '上传文件大小不符！';
             return false;
-        }*/
+        }
 
         /* 检查文件Mime类型 */
-        //TODO:FLASH上传的文件获取到的mime类型都为application/octet-stream
-        /*if (!$this->checkMime($file['type'])) {
+        if (!$this->checkMime($file['type'])) {
             $this->error = '上传文件MIME类型不允许！';
             return false;
-        }*/
+        }
 
         /* 检查文件后缀 */
         if (!$this->checkExt($file['ext'])) {
@@ -480,6 +476,9 @@ class Upload
             case 7:
                 $this->error = '文件写入失败！';
                 break;
+            case 8:
+                $this->error = '无效资源文件';
+                break;
             default:
                 $this->error = '未知上传错误！';
         }
@@ -507,6 +506,21 @@ class Upload
      */
     private function checkExt($ext) {
         return empty($this->config['exts']) ? true : in_array(strtolower($ext), $this->exts);
+    }
+
+    /**
+     * 文件资源信息
+     * @param $file
+     * @return bool
+     */
+    private function putFileInfo($file)
+    {
+        $array = get_headers($file,1);
+        if(preg_match('/200/',$array[0])){
+            return $array;
+        }else{
+            return false;
+        }
     }
 
     /**

@@ -81,6 +81,48 @@ class Local
     }
 
     /**
+     * 保持指定网络文件
+     * @param array $file 保存的文件信息
+     * @param bool $replace 同名文件是否覆盖
+     * @return bool 保存状态，true-成功，false-失败
+     */
+    public function put($file, $replace=true)
+    {
+        $filename = $this->rootPath . $file['savepath'] . $file['savename'];
+
+        /* 不覆盖同名文件 */
+        if (!$replace && is_file($filename)) {
+            $this->error = '存在同名文件' . $file['savename'];
+            return false;
+        }
+
+        /* 移动文件 */
+        if (!$this->move_file($file['tmp_name'], $filename)) {
+            $this->error = '文件上传保存错误！';
+            return false;
+        }
+
+        return true;
+    }
+
+    public function move_file($remote = '', $local)
+    {
+        try {
+            $cp = curl_init($remote);
+            $fp = fopen($local, "w");
+            curl_setopt($cp, CURLOPT_FILE, $fp);
+            curl_setopt($cp, CURLOPT_HEADER, 0);
+            curl_exec($cp);
+            curl_close($cp);
+            fclose($fp);
+
+            return true;
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+
+    /**
      * 创建目录
      * @param  string $savepath 要创建的穆里
      * @return boolean          创建状态，true-成功，false-失败

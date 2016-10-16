@@ -105,7 +105,8 @@ class Upload
 
     /**
      * 上传文件
-     * @param 文件信息数组 $files ，通常是 $_FILES数组
+     * @param string $files 文件信息数组，通常是 $_FILES数组
+     * @return array|bool
      */
     public function upload($files='') {
         if('' === $files){
@@ -207,6 +208,94 @@ class Upload
         return empty($info) ? false : $info;
     }
 
+    public function put($files)
+    {
+        if(empty($files)){
+            $this->error = '没有上传的文件！';
+            return false;
+        }
+
+        /* 检测上传根目录 */
+        if(!$this->uploader->checkRootPath()){
+            $this->error = $this->uploader->getError();
+            return false;
+        }
+
+        /* 检查上传目录 */
+        if(!$this->uploader->checkSavePath($this->savePath)){
+            $this->error = $this->uploader->getError();
+            return false;
+        }
+
+        /* 逐个检测并上传文件 */
+        $info    =  array();
+        // 对上传文件数组信息处理
+        $files   =  $this->dealPutFiles($files);
+        foreach ($files as $key => $file) {
+            if(!isset($file['key']))   $file['key']    =   $key;
+
+            /* 获取上传文件后缀，允许上传无后缀文件 */
+            $file['ext']    =   pathinfo($file['name'], PATHINFO_EXTENSION);
+
+            /* 文件上传检测 */
+            if (!$this->checkPut($file)){
+                continue;
+            }
+
+            /* 获取文件hash */
+            if($this->hash){
+                $file['md5']  = md5_file($file['tmp_name']);
+                $file['sha1'] = sha1_file($file['tmp_name']);
+            }
+
+            /* 调用回调函数检测文件是否存在 */
+            $data = call_user_func($this->callback, $file);
+            if( $this->callback && $data ){
+                if ( file_exists('.'.$data['path'])  ) {
+                    $info[$key] = $data;
+                    continue;
+                }elseif($this->removeTrash){
+                    call_user_func($this->removeTrash,$data);//删除垃圾据
+                }
+            }
+
+            /* 生成保存文件名 */
+            $savename = $this->getSaveName($file);
+            if(false == $savename){
+                continue;
+            } else {
+                $file['savename'] = $savename;
+            }
+
+            /* 检测并创建子目录 */
+            $subpath = $this->getSubPath($file['name']);
+            if(false === $subpath){
+                continue;
+            } else {
+                $file['savepath'] = $this->savePath . $subpath;
+            }
+
+            /* 对图像文件进行严格检测 */
+            $ext = strtolower($file['ext']);
+            if(in_array($ext, array('gif','jpg','jpeg','bmp','png','swf'))) {
+                $imginfo = getimagesize($file['tmp_name']);
+                if(empty($imginfo) || ($ext == 'gif' && empty($imginfo['bits']))){
+                    $this->error = '非法图像文件！';
+                    continue;
+                }
+            }
+
+            /* 保存文件 并记录保存成功的文件 */
+            if ($this->uploader->put($file,$this->replace)) {
+                unset($file['error'], $file['tmp_name']);
+                $info[$key] = $file;
+            } else {
+                $this->error = $this->uploader->getError();
+            }
+        }
+        return empty($info) ? false : $info;
+    }
+
     /**
      * 转换上传文件数组变量为正确的方式
      * @access private
@@ -234,6 +323,35 @@ class Upload
         return $fileArray;
     }
 
+    private function dealPutFiles($files) {
+        $fileArray  = array();
+        if (is_string($files))
+            $files = array($files);
+        foreach ($files as $key=>$file){
+            $temp = array();
+            $name = $this->dealPutFileName($file);
+            $temp['name'] = $name;
+            $temp['type'] = '';
+            $temp['tmp_name'] = $file;
+            $temp['error'] = 0;
+            $temp['size'] = -1;
+
+            $fileArray[$key] = $temp;
+        }
+        return $fileArray;
+    }
+
+    private function dealPutFileName($file)
+    {
+        $name = pathinfo($file, PATHINFO_BASENAME);
+        $pos = strrpos($name, '.');
+        $fileName = substr($name, 0, $pos);
+        preg_match("/^[a-zA-z0-9]+/", substr($name, $pos+1), $matches);
+        $fileExt = $matches[0];
+        $name = $fileName . '.' . $fileExt;
+        return $name;
+    }
+
     /**
      * 设置上传驱动
      * @param string $class 驱动类名称
@@ -243,7 +361,7 @@ class Upload
         require_once "Driver/{$class}.class.php";
         $this->uploader = new $class($this->rootPath, $config);
         if(!$this->uploader){
-            E("不存在上传驱动：{$class}");
+            throw new Exception("不存在上传驱动：{$class}");
         }
     }
 
@@ -281,6 +399,51 @@ class Upload
             $this->error = '上传文件MIME类型不允许！';
             return false;
         }
+
+        /* 检查文件后缀 */
+        if (!$this->checkExt($file['ext'])) {
+            $this->error = '上传文件后缀不允许';
+            return false;
+        }
+
+        /* 通过检测 */
+        return true;
+    }
+
+    /**
+     * 检查上传的文件
+     * @param array $file 文件信息
+     */
+    private function checkPut($file) {
+        /* 文件上传失败，捕获错误代码 */
+        if ($file['error']) {
+            $this->error($file['error']);
+            return false;
+        }
+
+        /* 无效上传 */
+        if (empty($file['name'])){
+            $this->error = '未知上传错误！';
+        }
+
+        /* 检查是否合法上传 */
+        if (!is_uploaded_file($file['tmp_name'])) {
+            $this->error = '非法上传文件！';
+            return false;
+        }
+
+        /* 检查文件大小 */
+        /*if (!$this->checkSize($file['size'])) {
+            $this->error = '上传文件大小不符！';
+            return false;
+        }*/
+
+        /* 检查文件Mime类型 */
+        //TODO:FLASH上传的文件获取到的mime类型都为application/octet-stream
+        /*if (!$this->checkMime($file['type'])) {
+            $this->error = '上传文件MIME类型不允许！';
+            return false;
+        }*/
 
         /* 检查文件后缀 */
         if (!$this->checkExt($file['ext'])) {

@@ -77,6 +77,17 @@ class Sae{
         return true;
     }
 
+    /**
+     * 保持指定网络文件
+     * @param array $file 保存的文件信息
+     * @param bool $replace 同名文件是否覆盖
+     * @return bool 保存状态，true-成功，false-失败
+     */
+    public function put($file,$replace=true) {
+        $this->error = '该方法暂不支持';
+        return false;
+    }
+
     public function mkdir(){
         return true;
     }

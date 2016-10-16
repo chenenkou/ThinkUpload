@@ -85,6 +85,27 @@ class Qiniu{
     }
 
     /**
+     * 保持指定网络文件
+     * @param array $file 保存的文件信息
+     * @param bool $replace 同名文件是否覆盖
+     * @return bool 保存状态，true-成功，false-失败
+     */
+    public function put(&$file,$replace=true) {
+        $key = $this->rootPath . $file['savepath'] . $file['savename'];
+        $upfile = array(
+            'name'=>'file',
+            'fileName'=>$key,
+            'fileBody'=>file_get_contents($file['tmp_name'])
+        );
+        $config = array();
+        $result = $this->qiniu->upload($config, $upfile);
+        $url = $this->qiniu->downlink($key);
+        $url = urldecode($url);
+        $file['url'] = $url;
+        return false ===$result ? false : true;
+    }
+
+    /**
      * 获取最后一次上传错误信息
      * @return string 错误信息
      */

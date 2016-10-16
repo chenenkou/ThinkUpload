@@ -9,14 +9,19 @@ ThinkUpload的使用比较简单，你只需要引入ThinkUpload类，实例化�
 //引入上传处理库
 import('ORG.Util.ThinkUpload.Upload');
 // 配置并实列化
+$error = null;
 $config = array(); // 上传配置
 $driver = ''; // 上传驱动
 $driverConfig = array(); // 上传驱动配置
 $Upload = new Upload($config, $driver, $driverConfig);
 // 上传文件
 $info = $Upload->upload($_FILES);
+// OR
+// 上传网络资源文件 
+$file = 'http://img5.imgtn.bdimg.com/it/u=8092695,1974817898&fm=21&gp=0.jpg';
+$info = $Upload->put($file);
 // 获取错误信息
-if (!$info) $info = $Upload->getError();
+if (!$info) $error = $Upload->getError();
 ```
 
 ## ThinkUpload有哪些配置？

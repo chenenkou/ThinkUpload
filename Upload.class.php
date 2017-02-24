@@ -50,8 +50,10 @@ class Upload
     public function __construct($config = array(), $driver = '', $driverConfig = array())
     {
         /* 获取配置 */
-        $this->config = array_merge($this->config, $config);
         $driver = $driver ? $driver : ($this->driver ? $this->driver : 'Local');
+        if (is_array($config['rootPath']))
+            $config['rootPath'] = $config['rootPath'][strtolower($driver)];
+        $this->config = array_merge($this->config, $config);
         $driverConfig = $driverConfig ? $driverConfig : ($this->driverConfig ? $this->driverConfig : array());
 
         /* 设置上传驱动 */
@@ -76,7 +78,7 @@ class Upload
     /**
      * 使用 $this->name 获取配置
      * @param  string $name 配置名称
-     * @return multitype    配置值
+     * @return string 配置值
      */
     public function __get($name)
     {
@@ -276,13 +278,15 @@ class Upload
             }
 
             /* 调用回调函数检测文件是否存在 */
-            $data = call_user_func($this->callback, $file);
-            if ($this->callback && $data) {
-                if (file_exists('.' . $data['path'])) {
-                    $info[$key] = $data;
-                    continue;
-                } elseif ($this->removeTrash) {
-                    call_user_func($this->removeTrash, $data);//删除垃圾据
+            if ($this->callback) {
+                $data = call_user_func($this->callback, $file);
+                if ($data) {
+                    if (file_exists('.' . $data['path'])) {
+                        $info[$key] = $data;
+                        continue;
+                    } elseif ($this->removeTrash) {
+                        call_user_func($this->removeTrash, $data);//删除垃圾据
+                    }
                 }
             }
 

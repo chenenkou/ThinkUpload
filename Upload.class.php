@@ -173,13 +173,15 @@ class Upload
             }
 
             /* 调用回调函数检测文件是否存在 */
-            $data = call_user_func($this->callback, $file);
-            if ($this->callback && $data) {
-                if (file_exists('.' . $data['path'])) {
-                    $info[$key] = $data;
-                    continue;
-                } elseif ($this->removeTrash) {
-                    call_user_func($this->removeTrash, $data);//删除垃圾据
+            if ($this->callback) {
+                $data = call_user_func($this->callback, $file);
+                if ($data) {
+                    if (file_exists('.' . $data['path'])) {
+                        $info[$key] = $data;
+                        continue;
+                    } elseif ($this->removeTrash) {
+                        call_user_func($this->removeTrash, $data);//删除垃圾据
+                    }
                 }
             }
 
@@ -646,11 +648,12 @@ class Upload
             }
             $name = call_user_func_array($func, $param);
         } elseif (is_string($rule)) { //字符串规则
-            if (function_exists($rule)) {
+            /*if(function_exists($rule)){
                 $name = call_user_func($rule);
             } else {
                 $name = $rule;
-            }
+            }*/
+            $name = $rule;
         }
         return $name;
     }
